@@ -25,4 +25,5 @@ macx: {
 }
 
 INCLUDEPATH += $${systemc_home}/include
-LIBS += -L$${systemc_home}/lib-$${systemc_target_arch} -lsystemc
+#LIBS += -L$${systemc_home}/lib-$${systemc_target_arch} -lsystemc
+LIBS += -L$${systemc_home}/lib-$${systemc_target_arch} -Wl,-R$${systemc_home}lib-$${systemc_target_arch} -Wl,-Bstatic -lsystemc -Wl,-Bdynamic -lm -pthread
