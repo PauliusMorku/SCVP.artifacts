@@ -1,8 +1,25 @@
 TEMPLATE = subdirs
 
 SUBDIRS += delta_delay
+SUBDIRS += tlm_lt_debug_transport
+SUBDIRS += tlm_lt_dmi
+SUBDIRS += tlm_lt_initiator_interconnect_target
+SUBDIRS += tlm_quantum_keeper
+SUBDIRS += custom_tlm
+SUBDIRS += tlm_lt_initiator_target
+SUBDIRS += reporting
+SUBDIRS += callbacks
+SUBDIRS += multiports
+SUBDIRS += portarrays
+SUBDIRS += dynamic_processes
+SUBDIRS += sc_event_and_queue
+SUBDIRS += datatypes
+SUBDIRS += event_finder
+SUBDIRS += mutex_example
 SUBDIRS += not_chain
 SUBDIRS += interfaces_ports
+SUBDIRS += custom_signal
+SUBDIRS += custom_fifo
 SUBDIRS += kpn_example
 SUBDIRS += kpn_artificial_deadlock
 SUBDIRS += thread_example
