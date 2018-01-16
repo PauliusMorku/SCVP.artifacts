@@ -39,23 +39,57 @@
 #include <queue>
 
 // Convenience Sockets:
-#include "tlm_utils/simple_initiator_socket.h"
-#include "tlm_utils/simple_target_socket.h"
 #include "tlm_utils/multi_passthrough_initiator_socket.h"
 #include "tlm_utils/multi_passthrough_target_socket.h"
 
-// PEQ:
-#include "tlm_utils/peq_with_cb_and_phase.h"
-
-// MM and tools:
-#include "../tlm_at_1/util.h";
 #include "../tlm_memory_manager/memory_manager.h"
-
-// Our local modules
-#include "initiator.h"
-#include "target.h"
+#include "../tlm_multipasstrough_sockets/initiator.h"
+#include "../tlm_multipasstrough_sockets/target.h"
 
 using namespace std;
+
+class routingExtension : public tlm::tlm_extension<routingExtension>
+{
+    private:
+    unsigned int inputPortNumber;
+    unsigned int outputPortNumber;
+
+    public:
+    routingExtension(unsigned int i, unsigned int o) : inputPortNumber(i),
+                                                       outputPortNumber(o)
+    {
+        cout << "\033[1;36m(E"
+             << ") @"  << setfill(' ') << setw(12) << sc_time_stamp()
+             << ": Extension Created = "
+             << "  inPort = " << dec << setfill(' ') << setw(2) << i
+             << " outPort = " << dec << setfill(' ') << setw(2) << o
+             << "\033[0m" << endl;
+    }
+
+    tlm_extension_base* clone() const
+    {
+        return new routingExtension(inputPortNumber, outputPortNumber);
+    }
+
+    void copy_from(const tlm_extension_base& ext)
+    {
+        const routingExtension& cpyFrom =
+                static_cast<const routingExtension&>(ext);
+        inputPortNumber = cpyFrom.getInputPortNumber();
+        outputPortNumber = cpyFrom.getOutputPortNumber();
+    }
+
+    unsigned int getInputPortNumber() const
+    {
+        return inputPortNumber;
+    }
+
+    unsigned int getOutputPortNumber() const
+    {
+        return outputPortNumber;
+    }
+};
+
 
 SC_MODULE(Interconnect)
 {
@@ -71,17 +105,6 @@ SC_MODULE(Interconnect)
     }
 
     private:
-    std::map<tlm::tlm_generic_payload*, int> bwRoutingTable;
-    std::map<tlm::tlm_generic_payload*, int> fwRoutingTable;
-
-    // |----- BEGIN REQ ====>|                     | FW
-    // |                     |----- BEGIN REQ ---->|
-    // |                     |<==== END REQ -------| BW
-    // |<---- END REQ -------|                     |
-    // |                     |<==== BEGIN RESP ----| BW
-    // |<---- BEGIN RESP ----|                     |
-    // |----- END RESP =====>|                     |
-    // |                     |----- END RESP ----->| FW
 
     int routeFW(int inPort,
                 tlm::tlm_generic_payload &trans,
@@ -107,8 +130,8 @@ SC_MODULE(Interconnect)
 
         if(store)
         {
-            bwRoutingTable[&trans] = inPort;  // From where it comes
-            fwRoutingTable[&trans] = outPort; // Where it should go
+            routingExtension* ext = new routingExtension(inPort, outPort);
+            trans.set_auto_extension(ext);
         }
 
         return outPort;
@@ -147,7 +170,9 @@ SC_MODULE(Interconnect)
         else if(phase == tlm::END_RESP)
         {
             // Adress was already modified in BEGIN_REQ phase:
-            outPort = fwRoutingTable[&trans];
+            routingExtension *ext = NULL;
+            trans.get_extension(ext);
+            outPort = ext->getOutputPortNumber();
             trans.release();
         }
         else
@@ -175,9 +200,9 @@ SC_MODULE(Interconnect)
                                                 tlm::tlm_phase& phase,
                                                 sc_time& delay )
     {
-        sc_assert(id == fwRoutingTable[&trans]);
-
-        int inPort = bwRoutingTable[&trans];
+        routingExtension *ext = NULL;
+        trans.get_extension(ext);
+        int inPort = ext->getInputPortNumber();
 
         return tSocket[inPort]->nb_transport_bw(trans, phase, delay);
     }
