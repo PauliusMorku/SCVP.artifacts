@@ -171,7 +171,7 @@ class exampleTarget : sc_module, tlm::tlm_fw_transport_if<>
                    trans.get_data_length());  // size
         }
 
-        delay = delay + sc_time(40, SC_NS);
+        delay = delay + sc_time(33, SC_NS);
 
         trans.set_response_status( tlm::TLM_OK_RESPONSE );
     }
